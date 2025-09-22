@@ -183,3 +183,90 @@ void pulseCLK() {
   digitalWrite(CLK, HIGH);
   digitalWrite(CLK, LOW);
 }
+
+#EX-3 use the correct co-ordinate working fine
+#include <Arduino.h>
+
+// Pins for P10 1/4 scan panel
+#define R1   2
+#define G1   3
+#define B1   4
+#define R2   5
+#define G2   6
+#define B2   7
+#define ROW_A A0
+#define ROW_B A1
+#define ROW_C A2
+#define OE   9
+#define LAT  10
+#define CLK  11
+
+#define PANEL_WIDTH 32
+#define PANEL_HEIGHT 16
+
+void setup() {
+  pinMode(R1, OUTPUT); pinMode(G1, OUTPUT); pinMode(B1, OUTPUT);
+  pinMode(R2, OUTPUT); pinMode(G2, OUTPUT); pinMode(B2, OUTPUT);
+  pinMode(ROW_A, OUTPUT); pinMode(ROW_B, OUTPUT); pinMode(ROW_C, OUTPUT);
+  pinMode(OE, OUTPUT); pinMode(LAT, OUTPUT); pinMode(CLK, OUTPUT);
+
+  digitalWrite(OE, HIGH); // disable output initially
+}
+
+void loop() {
+  // Example: Turn on LED at (5,3) with blue color
+  drawPixel(0, 0, 'G');
+  delay(1000);
+}
+
+// Draw a single pixel on the panel
+void drawPixel(int x, int y, char color) {
+    int groupRow = y % 8; // 0..7 top half, 8..15 bottom half
+    int rowAddress = y % 4; // Row select lines (A/B/C)
+
+    digitalWrite(OE, HIGH); // disable output
+    setRow(rowAddress);
+
+    for (int col = 0; col < PANEL_WIDTH; col++) {
+        // default off
+        digitalWrite(R1, LOW); digitalWrite(G1, LOW); digitalWrite(B1, LOW);
+        digitalWrite(R2, LOW); digitalWrite(G2, LOW); digitalWrite(B2, LOW);
+
+        if (col == x) {
+            if (y < 8) {
+                digitalWrite(R1, color == 'R');
+                digitalWrite(G1, color == 'G');
+                digitalWrite(B1, color == 'B');
+            } else {
+                digitalWrite(R2, color == 'R');
+                digitalWrite(G2, color == 'G');
+                digitalWrite(B2, color == 'B');
+            }
+        }
+        pulseClock();
+    }
+    latchRow();
+    enableOutput();
+}
+
+
+// Functions
+void setRow(int row) {
+  digitalWrite(ROW_A, row & 0x01);
+  digitalWrite(ROW_B, (row >> 1) & 0x01);
+  digitalWrite(ROW_C, (row >> 2) & 0x01);
+}
+
+void pulseClock() {
+  digitalWrite(CLK, HIGH);
+  digitalWrite(CLK, LOW);
+}
+
+void latchRow() {
+  digitalWrite(LAT, HIGH);
+  digitalWrite(LAT, LOW);
+}
+
+void enableOutput() {
+  digitalWrite(OE, LOW);
+}

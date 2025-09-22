@@ -75,3 +75,111 @@ void latchRow() {
 void enableOutput() {
   digitalWrite(OE, LOW);
 }  this glows 
+
+#EX-2 fill all the leds with red green and blue
+#include <Arduino.h>
+
+// ---------------- Pin Definitions ----------------
+#define R1   2
+#define G1   3
+#define B1   4
+#define R2   5
+#define G2   6
+#define B2   7
+#define A    A0
+#define B    A1
+#define C    A2
+#define OE   9
+#define LAT  10
+#define CLK  11
+
+// ---------------- Panel Size ----------------
+#define PANEL_WIDTH  32
+#define PANEL_HEIGHT 16
+
+// ---------------- Framebuffer ----------------
+// 0 = off, 1=Red, 2=Green, 3=Blue, 4=White
+uint8_t frame[PANEL_HEIGHT][PANEL_WIDTH];
+
+// ---------------- Setup ----------------
+void setup() {
+  pinMode(R1, OUTPUT); pinMode(G1, OUTPUT); pinMode(B1, OUTPUT);
+  pinMode(R2, OUTPUT); pinMode(G2, OUTPUT); pinMode(B2, OUTPUT);
+  pinMode(A, OUTPUT); pinMode(B, OUTPUT); pinMode(C, OUTPUT);
+  pinMode(OE, OUTPUT); pinMode(LAT, OUTPUT); pinMode(CLK, OUTPUT);
+
+  digitalWrite(OE, HIGH); // disable output initially
+}
+
+// ---------------- Loop ----------------
+void loop() {
+  // Fill screen with red
+  fillScreen(1);
+  for (int t=0; t<2000; t++) refreshDisplay();  // ~2s hold
+
+  // Fill screen with green
+  fillScreen(2);
+  for (int t=0; t<2000; t++) refreshDisplay();
+
+  // Fill screen with blue
+  fillScreen(3);
+  for (int t=0; t<2000; t++) refreshDisplay();
+}
+
+// ---------------- Functions ----------------
+
+// Draw a pixel into framebuffer
+void drawPixel(int x, int y, uint8_t color) {
+  if (x<0 || x>=PANEL_WIDTH || y<0 || y>=PANEL_HEIGHT) return;
+  frame[y][x] = color;
+}
+
+// Fill the entire screen with one color
+void fillScreen(uint8_t color) {
+  for (int y=0; y<PANEL_HEIGHT; y++) {
+    for (int x=0; x<PANEL_WIDTH; x++) {
+      frame[y][x] = color;
+    }
+  }
+}
+
+// Refresh the whole panel (scanning)
+void refreshDisplay() {
+  for (int row=0; row<8; row++) {
+    digitalWrite(OE, HIGH); // turn off LEDs while shifting
+
+    // shift out 32 pixels (top row and bottom row)
+    for (int col=PANEL_WIDTH-1; col>=0; col--) {
+      uint8_t top = frame[row][col];
+      uint8_t bottom = frame[row+8][col];
+
+      // top row
+      digitalWrite(R1, (top==1 || top==4));
+      digitalWrite(G1, (top==2 || top==4));
+      digitalWrite(B1, (top==3));
+
+      // bottom row
+      digitalWrite(R2, (bottom==1 || bottom==4));
+      digitalWrite(G2, (bottom==2 || bottom==4));
+      digitalWrite(B2, (bottom==3));
+
+      pulseCLK();
+    }
+
+    // latch the row data
+    digitalWrite(LAT, HIGH); digitalWrite(LAT, LOW);
+
+    // select row
+    digitalWrite(A, row & 0x01);
+    digitalWrite(B, (row>>1) & 0x01);
+    digitalWrite(C, (row>>2) & 0x01);
+
+    digitalWrite(OE, LOW); // enable output
+    delayMicroseconds(200); // hold row for brightness
+  }
+}
+
+void pulseCLK() {
+  digitalWrite(CLK, HIGH);
+  digitalWrite(CLK, LOW);
+}
